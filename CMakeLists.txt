@@ -46,4 +46,4 @@ include(CPack)
 
 enable_testing()
 
-add_test(matrix_tests test_matrix)
+add_test(bulk_tests test_bulk)
