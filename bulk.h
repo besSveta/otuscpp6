@@ -15,19 +15,18 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+using sclock=std::chrono::system_clock;
 // сохраняет команды и  выполняет их при необходимости.
 class BulkProcessor {
 	std::queue<std::string> commands;
 	std::string recieveTime;
-	using sclock=std::chrono::system_clock;
 public:
 	size_t size() {
 		return commands.size();
 	}
-	void AddCommand(std::string command) {
+	void AddCommand(std::string command, std::string time) {
 		if (commands.size() == 0) {
-			auto currentTime = sclock::to_time_t(sclock::now());
-			recieveTime = std::string(std::ctime(&currentTime));
+			recieveTime = time;
 		}
 		commands.push(command);
 	}
@@ -62,6 +61,11 @@ public:
 	}
 
 };
+ enum class State{
+	Processed,
+	Finish,
+	WaitComand,
+};
 
 // получает команду и решает, что делать: выполнять или копить.
 class CommandProcessor {
@@ -69,9 +73,11 @@ class CommandProcessor {
 	BulkProcessor bulkProcessor;
 	int openCount;
 	int closeCount;
+	sclock::time_point prevTime;
 	const std::string openBrace = "{";
 	const std::string closeBrace = "}";
 public:
+	State processorState;
 	size_t GetBulkSize(){
 		return bulkProcessor.size();
 	}
@@ -79,13 +85,27 @@ public:
 			N(n) {
 		openCount = 0;
 		closeCount = 0;
+		prevTime=sclock::now();
+		processorState= State::WaitComand;
 	}
+
 	void ProcessCommand(std::string command) {
 
+		auto currentTime=sclock::now();
+		auto currentTime_t = sclock::to_time_t(currentTime);
+		auto recieveTime = std::string(std::ctime(&currentTime_t));
+		auto diff=std::chrono::duration_cast<std::chrono::seconds>(currentTime -prevTime).count();
+		// выйти при вводе пустой строки и интервале между командами >2 секунд.
+		if (command=="" && diff>2){
+			processorState=State::Finish;
+			return;
+		}
+		prevTime=currentTime;
 		// новый блок.
 		if (command == openBrace) {
 			if (openCount == 0) {
 				bulkProcessor.Process();
+				processorState=State::Processed;
 			}
 			openCount++;
 		} else {
@@ -97,12 +117,17 @@ public:
 					bulkProcessor.Process();
 					openCount = 0;
 					closeCount = 0;
+					processorState=State::Processed;
 				}
 			} else {
-				bulkProcessor.AddCommand(command);
+				bulkProcessor.AddCommand(command, recieveTime);
 				// если блок команд полностью заполнен и размер блока не был изменен скобкой.
 				if (bulkProcessor.size() == N && openCount == 0) {
 					bulkProcessor.Process();
+					processorState=State::Processed;
+				}
+				else {
+					processorState=State::WaitComand;
 				}
 			}
 		}

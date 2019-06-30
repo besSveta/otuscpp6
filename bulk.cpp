@@ -27,9 +27,8 @@ int main(int, char *argv[]) {
 		n = 2;
 
 	CommandProcessor p(n);
-	for (std::string line; std::getline(std::cin, line);) {
+	for (std::string line; (p.processorState !=State::Finish && std::getline(std::cin, line));) {
 		p.ProcessCommand(trim(line));
 	}
 	return 0;
 }
-
