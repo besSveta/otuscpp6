@@ -18,7 +18,7 @@ std::string trim(const std::string& str,
 	return str.substr(strBegin, strRange);
 }
 
-int main(int arc, char *argv[]) {
+int main(int, char *argv[]) {
 
 	size_t n;
 
