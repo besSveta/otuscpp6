@@ -24,10 +24,9 @@ public:
 	size_t size() {
 		return commands.size();
 	}
-	void AddCommand(std::string command, sclock::time_point time) {
+	void AddCommand(std::string command, std::string time) {
 		if (commands.size() == 0) {
-			auto currentTime = std::chrono::duration_cast<std::chrono::seconds>(time.time_since_epoch());
-		    recieveTime =  std::to_string(currentTime.count());
+			recieveTime = time;
 		}
 		commands.push(command);
 	}
@@ -93,8 +92,8 @@ public:
 	void ProcessCommand(std::string command) {
 
 		auto currentTime=sclock::now();
-
-		auto diff=std::chrono::duration_cast<std::chrono::seconds>(currentTime -prevTime).count();
+		auto recieveTime = std::to_string(std::chrono::duration_cast<std::chrono::seconds>(currentTime.time_since_epoch()).count());
+		auto diff=std::chrono::duration_cast<std::chrono::seconds>(currentTime - prevTime).count();
 		// выйти при вводе пустой строки и интервале между командами >2 секунд.
 		if (command=="" && diff>2){
 			processorState=State::Finish;
@@ -110,7 +109,7 @@ public:
 			openCount++;
 		} else {
 			// закрывающая скобка.
-			if (command == closeBrace) {
+			if (command == closeBrace && openCount>0) {
 				closeCount++;
 				// проверка на вложенность.
 				if (closeCount == openCount) {
@@ -120,7 +119,7 @@ public:
 					processorState=State::Processed;
 				}
 			} else {
-				bulkProcessor.AddCommand(command, currentTime);
+				bulkProcessor.AddCommand(command, recieveTime);
 				// если блок команд полностью заполнен и размер блока не был изменен скобкой.
 				if (bulkProcessor.size() == N && openCount == 0) {
 					bulkProcessor.Process();
@@ -134,3 +133,4 @@ public:
 	}
 
 };
+
