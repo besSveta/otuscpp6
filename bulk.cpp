@@ -22,13 +22,22 @@ int main(int, char *argv[]) {
 
 	size_t n;
 
-	n = std::atoi(argv[1]);
+	n = 3;///std::atoi(argv[1]);
 	if (n == 0)
 		n = 2;
 
 	CommandProcessor p(n);
-	for (std::string line; (p.processorState !=State::Finish && std::getline(std::cin, line));) {
+	std::string line;
+	std::getline(std::cin, line);
+	while (p.processorState !=State::Finish ) {
 		p.ProcessCommand(trim(line));
+		std::getline(std::cin, line);
+		if (std::cin.eof())
+		{
+			p.ProcessCommand("", true);
+			break;
+		}
 	}
+
 	return 0;
 }
